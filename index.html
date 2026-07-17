@@ -202,18 +202,19 @@ AWG - 10 July 2026 DO Total：136 Actual Received：136 Scanner Count：136/136 
 
 function parseReport(text){
   const t=text.replace(/：/g,':').replace(/✅/g,'').replace(/\r/g,'');
-  const re=/([A-Z]{2,5})\s*[—–-]+\s*(\d{1,2}\s+[A-Za-z]{3,9}\.?\s+\d{2,4})([\s\S]*?)(?=[A-Z]{2,5}\s*[—–-]+\s*\d{1,2}\s+[A-Za-z]|$)/g;
+  const re=/([A-Z][A-Z0-9]{1,4})\s*[—–-]+\s*(\d{1,2}\s+[A-Za-z]{3,9}\.?\s+\d{2,4})([\s\S]*?)(?=[A-Z][A-Z0-9]{1,4}\s*[—–-]+\s*\d{1,2}\s+[A-Za-z]|$)/g;
   const rows=[];let m;
   while((m=re.exec(t))!==null){
     const store=m[1], dateStr=m[2].trim(), body=m[3];
     const num=rx=>{const r=body.match(rx);return r?parseInt(r[1],10):null;};
     const doTotal=num(/DO\s*Total\s*:\s*(\d+)/i);
-    const actual=num(/Actual\s*Receiv\w*\s*:\s*(\d+)/i);
+    const am=body.match(/Actual\s*Receiv\w*\s*:\s*(\d+)(?:\s*[➕+]\s*(\d+))?/i);
+    const actual=am?parseInt(am[1],10)+(am[2]?parseInt(am[2],10):0):null;
     const sm=body.match(/Scanner\s*Count\s*:\s*(\d+)(?:\s*\/\s*(\d+))?/i);
     const scanned=sm?parseInt(sm[1],10):null;
     const scanOf=sm&&sm[2]?parseInt(sm[2],10):null;
-    const rm=body.match(/Remark\s*\/?\s*差异说明\s*:?\s*([^\n]*)/i);
-    const remark=rm?rm[1].trim():'';
+    const rm=body.match(/Remark\s*\/?\s*(?:差异说明)?\s*:?\s*([\s\S]*)/i);
+    const remark=rm?rm[1].split('\n').map(s=>s.trim()).filter(Boolean).join(' '):'';
     const dm=dateStr.match(/(\d{1,2})\s+([A-Za-z]{3,9})\.?\s+(\d{2,4})/);
     let iso=null,dateLabel=dateStr;
     if(dm){
@@ -247,7 +248,7 @@ function analyse(r){
 const fmt=n=>n==null?'—':n.toLocaleString('en-US');
 const signed=n=>n==null?'—':(n>0?'+':'')+n;
 const cls=n=>n==null?'':(n===0?'zero':(n>0?'pos':'neg'));
-const key=r=>r.store+'|'+(r.iso||r.dateLabel);
+const key=r=>r.store+'|'+(r.iso||r.dateLabel)+'|'+(r.doTotal==null?'':r.doTotal);
 
 function chipFor(s){
   if(s==='matched')return '<span class="chip b-ok">MATCHED</span>';
