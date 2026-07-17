@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iORA Stock Transfer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F6F2; --panel:#FFFFFF; --ink:#182220; --ink-soft:#5A6662; --line:#DCE1DA;
+  --green:#1E7A4E; --green-soft:#E4F2E9;
+  --amber:#B97A12; --amber-soft:#FBF1DC;
+  --red:#C6402E; --red-soft:#FBE7E2;
+  --blue:#2B5B8A; --blue-soft:#E5EEF6;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --disp:'Barlow Condensed','Arial Narrow',var(--sans);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;padding:20px 16px 48px}
+.wrap{max-width:1080px;margin:0 auto}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:3px solid var(--ink);padding-bottom:14px;margin-bottom:18px}
+.h-title{font-family:var(--disp);font-weight:700;font-size:34px;line-height:.95;text-transform:uppercase;letter-spacing:.02em}
+.h-sub{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);margin-top:6px;letter-spacing:.04em}
+.h-right{text-align:right}
+.h-range{font-family:var(--mono);font-size:12px;background:var(--ink);color:var(--paper);padding:6px 12px;border-radius:3px;white-space:nowrap;display:inline-block}
+.save-state{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:5px}
+
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:6px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ink)}
+.kpi.k-green::before{background:var(--green)} .kpi.k-amber::before{background:var(--amber)}
+.kpi.k-red::before{background:var(--red)} .kpi.k-blue::before{background:var(--blue)}
+.kpi .lab{font-family:var(--disp);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft)}
+.kpi .val{font-family:var(--mono);font-weight:600;font-size:26px;margin-top:2px}
+.kpi .note{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:2px}
+
+.sec{font-family:var(--disp);font-weight:700;font-size:19px;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:10px;margin:26px 0 12px}
+.sec::after{content:"";flex:1;height:1px;background:var(--line)}
+.sec .cnt{font-family:var(--mono);font-size:11px;font-weight:500;background:var(--ink);color:var(--paper);padding:2px 8px;border-radius:10px;letter-spacing:0}
+select{font-family:var(--mono);font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink)}
+select:focus{outline:2px solid var(--blue)}
+
+/* trend */
+.trend{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px 18px 10px;overflow-x:auto}
+.t-cols{display:flex;gap:14px;align-items:flex-end;min-height:120px}
+.t-col{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:64px}
+.t-bar{width:34px;height:90px;background:#EEF1EC;border-radius:3px;position:relative;overflow:hidden}
+.t-fill{position:absolute;bottom:0;left:0;right:0;border-radius:3px 3px 0 0;transition:height .6s cubic-bezier(.2,.7,.2,1)}
+.t-fill.ok{background:var(--green)} .t-fill.mid{background:var(--amber)} .t-fill.bad{background:var(--red)}
+.t-pct{font-family:var(--mono);font-size:11.5px;font-weight:600}
+.t-date{font-family:var(--mono);font-size:10px;color:var(--ink-soft);white-space:nowrap}
+.t-sub{font-family:var(--mono);font-size:9.5px;color:var(--ink-soft)}
+.t-legend{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:10px}
+
+.cards{display:grid;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;display:grid;grid-template-columns:150px 1fr 210px;overflow:hidden}
+.card.flag{border-color:var(--amber)} .card.flag-red{border-color:var(--red)}
+.c-id{border-right:1px dashed var(--line);padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;background:linear-gradient(180deg,#FAFBF9,#F2F4F0)}
+.c-store{font-family:var(--disp);font-weight:700;font-size:28px;line-height:1;letter-spacing:.03em}
+.c-date{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-top:2px}
+.badge{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;padding:3px 8px;border-radius:3px;text-transform:uppercase;width:max-content}
+.b-ok{background:var(--green-soft);color:var(--green)}
+.b-warn{background:var(--amber-soft);color:var(--amber)}
+.b-bad{background:var(--red-soft);color:var(--red)}
+.c-bars{padding:14px 18px;display:flex;flex-direction:column;gap:9px;justify-content:center}
+.brow{display:grid;grid-template-columns:38px 1fr 52px;align-items:center;gap:10px}
+.brow .bl{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--ink-soft);letter-spacing:.05em}
+.track{height:14px;background:#EEF1EC;border-radius:3px;position:relative;overflow:hidden}
+.fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;min-width:2px;transition:width .6s cubic-bezier(.2,.7,.2,1)}
+.f-do{background:var(--ink)} .f-rcv{background:var(--blue)}
+.f-scn{background:repeating-linear-gradient(90deg,var(--green) 0 3px,#2f9663 3px 5px)}
+.f-scn.gap{background:repeating-linear-gradient(90deg,var(--amber) 0 3px,#d09a3a 3px 5px)}
+.brow .bv{font-family:var(--mono);font-size:12.5px;font-weight:600;text-align:right}
+.c-verdict{border-left:1px dashed var(--line);padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:6px;background:#FAFBF9}
+.v-row{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:11.5px}
+.v-row .k{color:var(--ink-soft);font-size:10.5px}
+.v-row .v{font-weight:600}
+.pos{color:var(--blue)} .neg{color:var(--red)} .zero{color:var(--green)}
+.remark{margin-top:4px;font-size:11.5px;color:var(--red);background:var(--red-soft);border-radius:4px;padding:5px 8px;line-height:1.4}
+
+.tblwrap{background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;min-width:660px}
+th{font-family:var(--disp);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;text-align:left;padding:10px 12px;background:var(--ink);color:var(--paper);white-space:nowrap}
+th.num,td.num{text-align:right}
+td{padding:9px 12px;border-top:1px solid var(--line);white-space:nowrap}
+td.rm{white-space:normal;font-family:var(--sans);font-size:12px;color:var(--ink-soft);min-width:160px}
+tr.hl td{background:var(--amber-soft)} tr.hl-red td{background:var(--red-soft)}
+tfoot td{font-weight:600;background:#EEF1EC;border-top:2px solid var(--ink)}
+.chip{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;letter-spacing:.05em}
+.del{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-family:var(--mono);font-size:11px;padding:2px 6px}
+.del:hover{color:var(--red)}
+
+.paste{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px}
+.paste p{font-size:12.5px;color:var(--ink-soft);margin-bottom:10px}
+textarea{width:100%;min-height:130px;font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:4px;padding:10px;resize:vertical;background:#FAFBF9;color:var(--ink)}
+textarea:focus{outline:2px solid var(--blue);outline-offset:1px}
+.btnrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+button.btn{font-family:var(--disp);font-weight:600;font-size:15px;text-transform:uppercase;letter-spacing:.06em;padding:8px 18px;border-radius:4px;border:1px solid var(--ink);cursor:pointer;background:var(--ink);color:var(--paper)}
+button.btn.ghost{background:transparent;color:var(--ink)}
+button.btn.danger{background:transparent;color:var(--red);border-color:var(--red)}
+button.btn:hover{opacity:.85}
+button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.parse-msg{font-family:var(--mono);font-size:11.5px;margin-top:8px;color:var(--green)}
+.parse-msg.err{color:var(--red)}
+
+footer{margin-top:30px;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);text-align:center}
+
+@media (max-width:860px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .kpis .kpi:first-child{grid-column:1/-1}
+  .card{grid-template-columns:1fr}
+  .c-id{border-right:none;border-bottom:1px dashed var(--line);flex-direction:row;align-items:center;justify-content:space-between}
+  .badge{margin-top:0}
+  .c-verdict{border-left:none;border-top:1px dashed var(--line)}
+  .h-title{font-size:27px}
+  .h-right{text-align:left}
+}
+@media (prefers-reduced-motion:reduce){.fill,.t-fill{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <div class="h-title">iORA Stock Transfer</div>
+    <div class="h-sub">DO vs Actual Received vs Scanner (EPC) · running log</div>
+  </div>
+  <div class="h-right">
+    <div class="h-range" id="rangeChip">—</div>
+    <div class="save-state" id="saveState"></div>
+  </div>
+</header>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="sec">Daily accuracy trend</div>
+<div class="trend">
+  <div class="t-cols" id="trend"></div>
+  <div class="t-legend">Bar = % of deliveries fully matched (DO = Received = Scanned) each day · green ≥ 90% · amber ≥ 70% · red below</div>
+</div>
+
+<div class="sec">Store deliveries <span class="cnt" id="cardCount">0</span>
+  <select id="dateFilter" aria-label="Filter by date"></select>
+</div>
+<div class="cards" id="cards"></div>
+
+<div class="sec">Reconciliation table</div>
+<div class="tblwrap">
+<table id="tbl">
+  <thead><tr>
+    <th>Store</th><th>Date</th>
+    <th class="num">DO</th><th class="num">Received</th><th class="num">Scanned</th>
+    <th class="num">Rcv − DO</th><th class="num">Scan gap</th>
+    <th>Status</th><th>Remark / 差异说明</th><th></th>
+  </tr></thead>
+  <tbody></tbody>
+  <tfoot></tfoot>
+</table>
+</div>
+
+<div class="sec">Add today's report</div>
+<div class="paste">
+  <p>Paste the day's group message and press <strong>Add to log</strong>. New deliveries are appended; if a store + date already exists, the newer paste replaces it. Everything is saved automatically, so the log keeps growing each day you come back.</p>
+  <textarea id="raw" spellcheck="false" placeholder="ABJ — 11 July 2026  DO Total：298 Actual Received：298 Scanner Count：298/298  Remark /差异说明：&#10;..."></textarea>
+  <div class="btnrow">
+    <button class="btn" id="btnAdd">Add to log</button>
+    <button class="btn ghost" id="btnReplace">Replace entire log with paste</button>
+    <button class="btn danger" id="btnClear">Clear all data</button>
+    <button class="btn ghost" id="btnExport">Export backup</button>
+    <button class="btn ghost" id="btnImport">Import backup</button>
+    <input type="file" id="fileImport" accept=".json" style="display:none">
+  </div>
+  <div class="parse-msg" id="msg"></div>
+</div>
+
+<footer>iORA Stock Transfer <strong>v2.1</strong> · Accuracy = deliveries where DO = Received = Scanned · data is saved on this device/browser — use Export backup to move or share the log</footer>
+</div>
+
+<script>
+const STORE_KEY='swims-receiving-log-v1';
+const MONTHS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+
+const DEFAULT_RAW = `ACQ— 10 JUL 26  DO Total： 41 Actual Receive：41 Scanner Count : 41  Remark / 差异说明：
+
+ABJ — 10 July 2026  DO Total：311 Actual Received：311 Scanner Count：311/311  Remark /差异说明：
+
+AWM — 09 July 2026  DO Total：226 Actual Received：226 Scanner Count：226/226  Remark /差异说明：
+
+AWM — 10 July 2026  DO Total：127 Actual Received：128 Scanner Count：127/128  Remark /差异说明： 未收到 AJK 9794 Charcoal 1M
+
+AJE — 10 JULY 2026
+DO Total： 177
+Actual Received：310
+Scanner Count : 310/310
+Remark / 差异说明：
+
+AWG - 10 July 2026 DO Total：136 Actual Received：136 Scanner Count：136/136  Remark /差异说明`;
+
+function parseReport(text){
+  const t=text.replace(/：/g,':').replace(/✅/g,'').replace(/\r/g,'');
+  const re=/([A-Z][A-Z0-9]{1,4})\s*[—–-]+\s*(\d{1,2}\s+[A-Za-z]{3,9}\.?\s+\d{2,4})([\s\S]*?)(?=[A-Z][A-Z0-9]{1,4}\s*[—–-]+\s*\d{1,2}\s+[A-Za-z]|$)/g;
+  const rows=[];let m;
+  while((m=re.exec(t))!==null){
+    const store=m[1], dateStr=m[2].trim(), body=m[3];
+    const num=rx=>{const r=body.match(rx);return r?parseInt(r[1],10):null;};
+    const doTotal=num(/DO\s*Total\s*:\s*(\d+)/i);
+    const am=body.match(/Actual\s*Receiv\w*\s*:\s*(\d+)(?:\s*[➕+]\s*(\d+))?/i);
+    const actual=am?parseInt(am[1],10)+(am[2]?parseInt(am[2],10):0):null;
+    const sm=body.match(/Scanner\s*Count\s*:\s*(\d+)(?:\s*\/\s*(\d+))?/i);
+    const scanned=sm?parseInt(sm[1],10):null;
+    const scanOf=sm&&sm[2]?parseInt(sm[2],10):null;
+    const rm=body.match(/Remark\s*\/?\s*(?:差异说明)?\s*:?\s*([\s\S]*)/i);
+    const remark=rm?rm[1].split('\n').map(s=>s.trim()).filter(Boolean).join(' '):'';
+    const dm=dateStr.match(/(\d{1,2})\s+([A-Za-z]{3,9})\.?\s+(\d{2,4})/);
+    let iso=null,dateLabel=dateStr;
+    if(dm){
+      let y=parseInt(dm[3],10); if(y<100)y+=2000;
+      const mo=MONTHS[dm[2].slice(0,3).toLowerCase()];
+      if(mo!==undefined){
+        iso=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(parseInt(dm[1],10)).padStart(2,'0');
+        dateLabel=String(parseInt(dm[1],10)).padStart(2,'0')+' '+dm[2].slice(0,3).toUpperCase()+' '+y;
+      }
+    }
+    if(doTotal===null&&actual===null&&scanned===null)continue;
+    rows.push({store,iso,dateLabel,doTotal,actual,scanned,scanOf,remark});
+  }
+  return rows;
+}
+
+function analyse(r){
+  const rcvVar=(r.actual!=null&&r.doTotal!=null)?r.actual-r.doTotal:null;
+  const scanBase=r.scanOf!=null?r.scanOf:r.actual;
+  const scanGap=(r.scanned!=null&&scanBase!=null)?scanBase-r.scanned:null;
+  const fullMatch = rcvVar===0 && (scanGap===0 || (scanGap===null&&r.scanned===r.actual));
+  let status='matched';
+  if(!fullMatch){
+    if(r.remark||(scanGap!==null&&scanGap>0&&rcvVar!==0)) status='shortage';
+    else if(scanGap!==null&&scanGap>0) status='scan gap';
+    else status='qty variance';
+  }
+  return {...r,rcvVar,scanGap,fullMatch,status};
+}
+
+const fmt=n=>n==null?'—':n.toLocaleString('en-US');
+const signed=n=>n==null?'—':(n>0?'+':'')+n;
+const cls=n=>n==null?'':(n===0?'zero':(n>0?'pos':'neg'));
+const key=r=>r.store+'|'+(r.iso||r.dateLabel)+'|'+(r.doTotal==null?'':r.doTotal);
+
+function chipFor(s){
+  if(s==='matched')return '<span class="chip b-ok">MATCHED</span>';
+  if(s==='qty variance')return '<span class="chip b-warn">QTY VARIANCE</span>';
+  if(s==='scan gap')return '<span class="chip b-warn">SCAN GAP</span>';
+  return '<span class="chip b-bad">DISCREPANCY</span>';
+}
+
+/* ── persistence (works inside Claude AND when hosted as a normal web page) ── */
+let entries=[];
+let storageOK=false;
+
+const hasClaudeStore=typeof window!=='undefined'&&window.storage&&typeof window.storage.get==='function';
+function hasLocalStore(){try{localStorage.setItem('__t','1');localStorage.removeItem('__t');return true;}catch(e){return false;}}
+
+async function loadSaved(){
+  if(hasClaudeStore){
+    try{const r=await window.storage.get(STORE_KEY);storageOK=true;
+      if(r&&r.value){const v=JSON.parse(r.value);if(Array.isArray(v)&&v.length)return v;}
+    }catch(e){storageOK=true;/* key not created yet */}
+    return null;
+  }
+  if(hasLocalStore()){
+    storageOK=true;
+    try{const v=JSON.parse(localStorage.getItem(STORE_KEY)||'null');if(Array.isArray(v)&&v.length)return v;}catch(e){}
+    return null;
+  }
+  return null;
+}
+async function persist(){
+  if(hasClaudeStore){
+    try{await window.storage.set(STORE_KEY,JSON.stringify(entries));storageOK=true;
+      setSave('Saved · '+entries.length+' deliveries in log');return;}catch(e){}
+  }
+  if(hasLocalStore()){
+    try{localStorage.setItem(STORE_KEY,JSON.stringify(entries));storageOK=true;
+      setSave('Saved in this browser · '+entries.length+' deliveries');return;}catch(e){}
+  }
+  storageOK=false;
+  setSave('Session only — data will reset when the page closes');
+}
+function setSave(t){document.getElementById('saveState').textContent=t;}
+
+function mergeEntries(newRows){
+  const map=new Map(entries.map(r=>[key(r),r]));
+  let added=0,updated=0;
+  for(const r of newRows){
+    if(map.has(key(r)))updated++;else added++;
+    map.set(key(r),r);
+  }
+  entries=[...map.values()];
+  return {added,updated};
+}
+
+/* ── rendering ── */
+let currentFilter='all';
+
+function render(){
+  const all=entries.map(analyse).sort((a,b)=>((a.iso||'')<(b.iso||'')?-1:(a.iso||'')>(b.iso||'')?1:0)||a.store.localeCompare(b.store));
+
+  // date list
+  const dates=[...new Set(all.filter(r=>r.iso).map(r=>r.iso))].sort();
+  const sel=document.getElementById('dateFilter');
+  const prev=currentFilter;
+  sel.innerHTML='<option value="all">All dates</option>'+dates.map(d=>{
+    const lab=all.find(r=>r.iso===d).dateLabel;
+    return `<option value="${d}" ${d===prev?'selected':''}>${lab}</option>`;
+  }).join('');
+  if(prev!=='all'&&!dates.includes(prev)){currentFilter='all';sel.value='all';}
+
+  // range chip
+  if(dates.length){
+    const lab=d=>all.find(r=>r.iso===d).dateLabel;
+    document.getElementById('rangeChip').textContent=dates.length===1?lab(dates[0]):lab(dates[0])+' → '+lab(dates[dates.length-1]);
+  }else document.getElementById('rangeChip').textContent='No data';
+
+  // trend (always all data)
+  const trendEl=document.getElementById('trend');
+  trendEl.innerHTML=dates.map(d=>{
+    const rows=all.filter(r=>r.iso===d);
+    const matched=rows.filter(r=>r.fullMatch).length;
+    const pct=Math.round(matched/rows.length*100);
+    const c=pct>=90?'ok':(pct>=70?'mid':'bad');
+    const lab=rows[0].dateLabel.slice(0,6);
+    return `<div class="t-col">
+      <span class="t-pct">${pct}%</span>
+      <div class="t-bar"><div class="t-fill ${c}" style="height:${pct}%"></div></div>
+      <span class="t-date">${lab}</span>
+      <span class="t-sub">${matched}/${rows.length} ok</span>
+    </div>`;
+  }).join('')||'<span class="t-sub">No dated entries yet</span>';
+
+  // filtered view
+  const R=currentFilter==='all'?all:all.filter(r=>r.iso===currentFilter);
+
+  // KPIs
+  const tDO=R.reduce((s,r)=>s+(r.doTotal||0),0);
+  const tRC=R.reduce((s,r)=>s+(r.actual||0),0);
+  const tSC=R.reduce((s,r)=>s+(r.scanned||0),0);
+  const matched=R.filter(r=>r.fullMatch).length;
+  const missing=R.reduce((s,r)=>s+Math.max(0,r.scanGap||0),0);
+  const acc=R.length?Math.round(matched/R.length*100):0;
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi k-blue"><div class="lab">Delivery accuracy</div><div class="val">${acc}%</div><div class="note">${matched} of ${R.length} fully matched</div></div>
+    <div class="kpi"><div class="lab">DO total (expected)</div><div class="val">${fmt(tDO)}</div><div class="note">units on delivery orders</div></div>
+    <div class="kpi"><div class="lab">Actual received</div><div class="val">${fmt(tRC)}</div><div class="note">${signed(tRC-tDO)} vs DO</div></div>
+    <div class="kpi k-green"><div class="lab">Scanned (EPC)</div><div class="val">${fmt(tSC)}</div><div class="note">${tRC?((tSC/tRC)*100).toFixed(1):'0'}% of received</div></div>
+    <div class="kpi ${missing?'k-red':'k-green'}"><div class="lab">Unscanned / missing</div><div class="val">${missing}</div><div class="note">${missing?'units not confirmed by scan':'all received units scanned'}</div></div>`;
+
+  // cards
+  document.getElementById('cardCount').textContent=R.length;
+  const maxV=Math.max(...R.map(r=>Math.max(r.doTotal||0,r.actual||0,r.scanned||0)),1);
+  document.getElementById('cards').innerHTML=R.map(r=>{
+    const w=v=>v==null?0:Math.max(2,v/maxV*100);
+    const flag=r.fullMatch?'':(r.status==='shortage'?'flag-red':'flag');
+    const badge=r.fullMatch?'<span class="badge b-ok">Matched</span>':
+      (r.status==='shortage'?'<span class="badge b-bad">Discrepancy</span>':'<span class="badge b-warn">'+r.status+'</span>');
+    return `<div class="card ${flag}">
+      <div class="c-id"><div><div class="c-store">${r.store}</div><div class="c-date">${r.dateLabel}</div></div>${badge}</div>
+      <div class="c-bars">
+        <div class="brow"><span class="bl">DO</span><div class="track"><div class="fill f-do" style="width:${w(r.doTotal)}%"></div></div><span class="bv">${fmt(r.doTotal)}</span></div>
+        <div class="brow"><span class="bl">RCV</span><div class="track"><div class="fill f-rcv" style="width:${w(r.actual)}%"></div></div><span class="bv">${fmt(r.actual)}</span></div>
+        <div class="brow"><span class="bl">SCN</span><div class="track"><div class="fill f-scn ${r.scanGap>0?'gap':''}" style="width:${w(r.scanned)}%"></div></div><span class="bv">${fmt(r.scanned)}</span></div>
+      </div>
+      <div class="c-verdict">
+        <div class="v-row"><span class="k">Received − DO</span><span class="v ${cls(r.rcvVar)}">${signed(r.rcvVar)}</span></div>
+        <div class="v-row"><span class="k">Scan vs received</span><span class="v ${cls(r.scanGap==null?null:-(r.scanGap||0))}">${r.scanGap==null?'—':(r.scanGap===0?'complete':r.scanGap+' unscanned')}</span></div>
+        <div class="v-row"><span class="k">Scan coverage</span><span class="v">${(r.scanOf??r.actual)?((r.scanned/(r.scanOf??r.actual))*100).toFixed(1)+'%':'—'}</span></div>
+        ${r.remark?`<div class="remark">⚠ ${r.remark}</div>`:''}
+      </div>
+    </div>`;
+  }).join('')||'<div style="font-family:var(--mono);font-size:12px;color:var(--ink-soft)">No deliveries yet — paste a report below to start the log.</div>';
+
+  // table
+  document.querySelector('#tbl tbody').innerHTML=R.map(r=>{
+    const hl=r.fullMatch?'':(r.status==='shortage'?'hl-red':'hl');
+    return `<tr class="${hl}">
+      <td><strong>${r.store}</strong></td><td>${r.dateLabel}</td>
+      <td class="num">${fmt(r.doTotal)}</td><td class="num">${fmt(r.actual)}</td>
+      <td class="num">${fmt(r.scanned)}${r.scanOf!=null?' / '+r.scanOf:''}</td>
+      <td class="num ${cls(r.rcvVar)}">${signed(r.rcvVar)}</td>
+      <td class="num ${cls(r.scanGap==null?null:-(r.scanGap||0))}">${r.scanGap==null?'—':signed(-r.scanGap).replace('+0','0')}</td>
+      <td>${chipFor(r.status)}</td>
+      <td class="rm">${r.remark||'—'}</td>
+      <td><button class="del" data-k="${key(r)}" title="Remove this entry">✕</button></td>
+    </tr>`;
+  }).join('');
+  document.querySelector('#tbl tfoot').innerHTML=R.length?`<tr>
+    <td colspan="2">TOTAL · ${R.length} deliveries</td>
+    <td class="num">${fmt(tDO)}</td><td class="num">${fmt(tRC)}</td><td class="num">${fmt(tSC)}</td>
+    <td class="num ${cls(tRC-tDO)}">${signed(tRC-tDO)}</td>
+    <td class="num ${cls(-(tRC-tSC))}">${signed(-(tRC-tSC)).replace('+0','0')}</td>
+    <td colspan="3">${acc}% fully matched</td></tr>`:'';
+
+  document.querySelectorAll('.del').forEach(b=>b.addEventListener('click',async()=>{
+    entries=entries.filter(r=>key(r)!==b.dataset.k);
+    await persist();render();
+  }));
+}
+
+/* ── actions ── */
+function setMsg(t,err){const m=document.getElementById('msg');m.textContent=t;m.className='parse-msg'+(err?' err':'');}
+
+document.getElementById('btnAdd').addEventListener('click',async()=>{
+  const raw=document.getElementById('raw').value.trim();
+  if(!raw){setMsg('✕ Paste a report first',true);return;}
+  const rows=parseReport(raw);
+  if(!rows.length){setMsg('✕ No entries recognised — expected e.g. "ABJ — 11 July 2026 DO Total：298 …"',true);return;}
+  const {added,updated}=mergeEntries(rows);
+  await persist();render();
+  document.getElementById('raw').value='';
+  setMsg(`✓ ${added} added${updated?', '+updated+' updated':''} — log now has ${entries.length} deliveries`);
+});
+
+document.getElementById('btnReplace').addEventListener('click',async()=>{
+  const raw=document.getElementById('raw').value.trim();
+  if(!raw){setMsg('✕ Paste a report first',true);return;}
+  const rows=parseReport(raw);
+  if(!rows.length){setMsg('✕ No entries recognised',true);return;}
+  entries=rows;await persist();render();
+  document.getElementById('raw').value='';
+  setMsg('✓ Log replaced — '+rows.length+' deliveries');
+});
+
+document.getElementById('btnClear').addEventListener('click',async()=>{
+  if(!confirm('Clear the entire receiving log? This cannot be undone.'))return;
+  entries=[];await persist();render();
+  setMsg('Log cleared');
+});
+
+document.getElementById('dateFilter').addEventListener('change',e=>{currentFilter=e.target.value;render();});
+
+document.getElementById('btnExport').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify(entries,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='iora-stock-transfer-log.json';
+  a.click();URL.revokeObjectURL(a.href);
+  setMsg('✓ Backup downloaded — share this file or import it on another device');
+});
+document.getElementById('btnImport').addEventListener('click',()=>document.getElementById('fileImport').click());
+document.getElementById('fileImport').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=async()=>{
+    try{
+      const v=JSON.parse(rd.result);
+      if(!Array.isArray(v))throw 0;
+      const {added,updated}=mergeEntries(v);
+      await persist();render();
+      setMsg(`✓ Backup imported — ${added} added, ${updated} updated`);
+    }catch(err){setMsg('✕ That file is not a valid backup',true);}
+  };
+  rd.readAsText(f);e.target.value='';
+});
+
+/* ── init ── */
+(async()=>{
+  const saved=await loadSaved();
+  if(saved){entries=saved;setSave('Saved · '+entries.length+' deliveries in log');}
+  else{
+    entries=parseReport(DEFAULT_RAW);
+    await persist();
+  }
+  render();
+})();
+</script>
+</body>
+</html>
